@@ -36,6 +36,7 @@ uint32_t blocksize;      // Block/Line size
 uint32_t memspeed;       // Latency of Main Memory
 
 //------------------------------------//
+
 //          Cache Statistics          //
 //------------------------------------//
 
@@ -58,6 +59,18 @@ uint64_t l2cachePenalties; // L2$ penalties
 //
 //TODO: Add your Cache data structures here
 //
+
+uint32_t ITagMask;
+uint32_t IIndexMask;
+uint32_t DTagMask;
+uint32_t DIndexMask;
+uint32_t L2TagMask;
+uint32_t L2IndexMask;
+
+map<uint32_t, vector<uint32_t>> IMap;
+map<uint32_t, vector<uint32_t>> DMap;
+map<uint32_t, vector<uint32_t>> L2Map;
+
 
 //------------------------------------//
 //          Cache Functions           //
@@ -84,6 +97,11 @@ init_cache()
   //
 }
 
+pair<uint32_t, uint32_t> parseAddress(uint32_t addr, uint32_t indexMask, uint32_t tagMask) {
+  // get index and tag
+}
+
+
 // Perform a memory access through the icache interface for the address 'addr'
 // Return the access time for the memory operation
 //
@@ -93,7 +111,36 @@ icache_access(uint32_t addr)
   //
   //TODO: Implement I$
   //
-  return memspeed;
+  icacheRefs++;
+
+
+  if (L1 is not initialized)
+    return l2cache_access(addr);
+
+  pair<> p = parseAddress(addr, IIndexMask, ITagMask);
+
+  vector<>& v = map[p.second];
+
+  if (v.find(p.first) != v.end) {
+    move_to_last();
+    return icacheHitTime;
+  }
+
+  if (v.size() < icacheAssoc) {
+    v.push_back(p.first);
+    return icacheHitTime;
+  }
+
+  delete_first_and_append();
+
+  uint32_t penalty = l2cache_access();
+
+  icacheMisses++;
+
+  icachePenalties += penalty;
+  
+
+  return icacheHitTime + penalty;
 }
 
 // Perform a memory access through the dcache interface for the address 'addr'
