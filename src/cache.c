@@ -14,12 +14,11 @@
 
 using namespace std;
 
+// Student Information
 //
-// TODO:Student Information
-//
-const char *studentName = "NAME";
-const char *studentID   = "PID";
-const char *email       = "EMAIL";
+const char *studentName = "Bohan Zhang, Ruochao Yan";
+const char *studentID   = "A53247416, A53247716";
+const char *email       = "boz082@ucsd.edu, ruochao@eng.ucsd.edu";
 
 //------------------------------------//
 //        Cache Configuration         //
@@ -61,10 +60,6 @@ uint64_t l2cachePenalties; // L2$ penalties
 //------------------------------------//
 //        Cache Data Structures       //
 //------------------------------------//
-
-//
-//TODO: Add your Cache data structures here
-//
 
 uint32_t itagMask = 0;
 uint32_t iindexMask = 0;
@@ -164,11 +159,7 @@ init_cache()
 uint32_t
 icache_access(uint32_t addr)
 {
-  //
-  //TODO: Implement I$
-  //
   icacheRefs++;
-
 
   if (icacheSets == 0)
     return l2cache_access(addr);
@@ -210,11 +201,7 @@ icache_access(uint32_t addr)
 uint32_t
 dcache_access(uint32_t addr)
 {
-  //
-  //TODO: Implement D$
-  //
   dcacheRefs++;
-
 
   if (dcacheSets == 0)
     return l2cache_access(addr);
@@ -256,9 +243,6 @@ dcache_access(uint32_t addr)
 uint32_t
 l2cache_access(uint32_t addr)
 {
-  //
-  //TODO: Implement L2$
-  //
   l2cacheRefs++;
 
   uint32_t tag = l2tagMask & addr;
@@ -287,7 +271,6 @@ l2cache_access(uint32_t addr)
   }
 
   v.push_back(tag);
-
 
   l2cachePenalties += memspeed;
   
