@@ -7,6 +7,12 @@
 //========================================================//
 
 #include "cache.h"
+#include <map>
+#include <vector>
+#include <utility>
+#include <iostream>
+
+using namespace std;
 
 //
 // TODO:Student Information
@@ -60,21 +66,41 @@ uint64_t l2cachePenalties; // L2$ penalties
 //TODO: Add your Cache data structures here
 //
 
-uint32_t ITagMask;
-uint32_t IIndexMask;
-uint32_t DTagMask;
-uint32_t DIndexMask;
-uint32_t L2TagMask;
-uint32_t L2IndexMask;
+uint32_t itagMask = 0;
+uint32_t iindexMask = 0;
+uint32_t dtagMask = 0;
+uint32_t dindexMask = 0;
+uint32_t l2tagMask = 0;
+uint32_t l2indexMask = 0;
 
-map<uint32_t, vector<uint32_t>> IMap;
-map<uint32_t, vector<uint32_t>> DMap;
-map<uint32_t, vector<uint32_t>> L2Map;
+map<uint32_t, vector<uint32_t>> imap;
+map<uint32_t, vector<uint32_t>> dmap;
+map<uint32_t, vector<uint32_t>> l2map;
 
 
 //------------------------------------//
 //          Cache Functions           //
 //------------------------------------//
+
+
+// Generate Mask to extract tag and index from the address
+void generate_mask(uint32_t cacheSets, uint32_t cacheAssoc, uint32_t *tag, uint32_t *index) {
+  uint32_t tagXor = 0;
+  for (int i = 1; i < cacheSets; i *= 2) {
+    (*index) <<= 1;
+    (*index) += 1;
+    tagXor <<= 1;
+    tagXor += 1;
+  }
+
+  for (int i = 1; i < blocksize; i *= 2) {
+    (*index) <<= 1;
+    tagXor <<= 1;
+    tagXor += 1;
+  }
+
+  (*tag) = ~tagXor;
+}
 
 // Initialize the Cache Hierarchy
 //
@@ -92,13 +118,12 @@ init_cache()
   l2cacheMisses     = 0;
   l2cachePenalties  = 0;
   
+  // Initialize Cache Simulator Data Structures
   //
-  //TODO: Initialize Cache Simulator Data Structures
-  //
-}
 
-pair<uint32_t, uint32_t> parseAddress(uint32_t addr, uint32_t indexMask, uint32_t tagMask) {
-  // get index and tag
+  generate_mask(icacheSets, icacheAssoc, &itagMask, &iindexMask);
+  generate_mask(dcacheSets, dcacheAssoc, &dtagMask, &dindexMask);
+  generate_mask(l2cacheSets, l2cacheAssoc, &l2tagMask, &l2indexMask);
 }
 
 
@@ -114,32 +139,37 @@ icache_access(uint32_t addr)
   icacheRefs++;
 
 
-  if (L1 is not initialized)
+  if (icacheSets == 0)
     return l2cache_access(addr);
 
-  pair<> p = parseAddress(addr, IIndexMask, ITagMask);
+  uint32_t tag = itagMask & addr;
+  uint32_t index = iindexMask & addr;
 
-  vector<>& v = map[p.second];
+  vector<uint32_t>& v = imap[index];
 
-  if (v.find(p.first) != v.end) {
-    move_to_last();
-    return icacheHitTime;
+  int i = 0;
+  for (; i < v.size(); i++) {
+    if (v[i] == tag)
+      break;
   }
 
-  if (v.size() < icacheAssoc) {
-    v.push_back(p.first);
+  if (i < v.size()) {
+    v.erase(v.begin() + i);
+    v.push_back(tag);
     return icacheHitTime;
   }
-
-  delete_first_and_append();
-
-  uint32_t penalty = l2cache_access();
 
   icacheMisses++;
+  uint32_t penalty = l2cache_access(addr);
+
+  if (v.size() == icacheAssoc) {
+    v.erase(v.begin());
+  }
+
+  v.push_back(tag);
 
   icachePenalties += penalty;
   
-
   return icacheHitTime + penalty;
 }
 
@@ -152,7 +182,41 @@ dcache_access(uint32_t addr)
   //
   //TODO: Implement D$
   //
-  return memspeed;
+  dcacheRefs++;
+
+
+  if (dcacheSets == 0)
+    return l2cache_access(addr);
+
+  uint32_t tag = dtagMask & addr;
+  uint32_t index = dindexMask & addr;
+
+  vector<uint32_t>& v = dmap[index];
+
+  int i = 0;
+  for (; i < v.size(); i++) {
+    if (v[i] == tag)
+      break;
+  }
+
+  if (i < v.size()) {
+    v.erase(v.begin() + i);
+    v.push_back(tag);
+    return dcacheHitTime;
+  }
+
+  dcacheMisses++;
+  uint32_t penalty = l2cache_access(addr);
+
+  if (v.size() == dcacheAssoc) {
+    v.erase(v.begin());
+  }
+
+  v.push_back(tag);
+
+  dcachePenalties += penalty;
+  
+  return dcacheHitTime + penalty;
 }
 
 // Perform a memory access to the l2cache for the address 'addr'
@@ -164,5 +228,34 @@ l2cache_access(uint32_t addr)
   //
   //TODO: Implement L2$
   //
-  return memspeed;
+  l2cacheRefs++;
+
+  uint32_t tag = l2tagMask & addr;
+  uint32_t index = l2indexMask & addr;
+
+  vector<uint32_t>& v = l2map[index];
+
+  int i = 0;
+  for (; i < v.size(); i++) {
+    if (v[i] == tag)
+      break;
+  }
+
+  if (i < v.size()) {
+    v.erase(v.begin() + i);
+    v.push_back(tag);
+    return l2cacheHitTime;
+  }
+
+  l2cacheMisses++;
+
+  if (v.size() == l2cacheAssoc) {
+    v.erase(v.begin());
+  }
+
+  v.push_back(tag);
+
+  l2cachePenalties += memspeed;
+  
+  return l2cacheHitTime + memspeed;
 }
