@@ -102,6 +102,37 @@ void generate_mask(uint32_t cacheSets, uint32_t cacheAssoc, uint32_t *tag, uint3
   (*tag) = ~tagXor;
 }
 
+// Update l1 cache to ensure the inclusive property
+void update_l1cache(uint32_t addr) {
+  uint32_t iindex = iindexMask & addr;
+  uint32_t itag = itagMask & addr;
+  uint32_t dindex = dindexMask & addr;
+  uint32_t dtag = dtagMask & addr;
+
+  if (imap.find(iindex) != imap.end()) {
+    vector<uint32_t> &v = imap[iindex];
+    int i = 0;
+    for (; i < v.size(); i++) {
+      if (v[i] == itag)
+      break;
+    }
+    if (i < v.size())
+      v.erase(v.begin() + i);
+  }
+
+  if (dmap.find(dindex) != dmap.end()) {
+    vector<uint32_t> &v = dmap[dindex];
+    int i = 0;
+    for (; i < v.size(); i++) {
+      if (v[i] == dtag)
+      break;
+    }
+    if (i < v.size())
+      v.erase(v.begin() + i);
+  }
+}
+
+
 // Initialize the Cache Hierarchy
 //
 void
@@ -250,10 +281,13 @@ l2cache_access(uint32_t addr)
   l2cacheMisses++;
 
   if (v.size() == l2cacheAssoc) {
+    if (inclusive)
+      update_l1cache(v[0] | index);
     v.erase(v.begin());
   }
 
   v.push_back(tag);
+
 
   l2cachePenalties += memspeed;
   
